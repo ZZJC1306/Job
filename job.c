@@ -86,9 +86,17 @@ void scheduler()
 
 #endif
 
+	#ifdef DEBUG
+		printf("before update\n");
+		do_stat(cmd);
+	#endif
+
 	updateall();
 
-
+	#ifdef DEBUG
+		printf("after update\n");
+		do_stat(cmd);
+	#endif
 
 	switch(cmd.type){
 
