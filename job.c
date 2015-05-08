@@ -119,32 +119,7 @@ void scheduler()
 	updateall();
 //调试7
 #ifdef DEBUG
-	struct waitQueue *p;	
-	char timebuf[BUFLEN];
-	if(current){
-		strcpy(timebuf,ctime(&(current->job->create_time)));
-		timebuf[strlen(timebuf)-1]='\0';
-		printf("%d\t%d\t%d\t%d\t%d\t%s\t%s\n",
-			current->job->jid,
-			current->job->pid,
-			current->job->ownerid,
-			current->job->run_time,
-			current->job->wait_time,
-			timebuf,"RUNNING");
-	}
-
-	for(p=head;p!=NULL;p=p->next){
-		strcpy(timebuf,ctime(&(p->job->create_time)));
-		timebuf[strlen(timebuf)-1]='\0';
-		printf("%d\t%d\t%d\t%d\t%d\t%s\t%s\n",
-			p->job->jid,
-			p->job->pid,
-			p->job->ownerid,
-			p->job->run_time,
-			p->job->wait_time,
-			timebuf,
-			"READY");
-	}	
+	do_stat(cmd);
 #endif
 
 	switch(cmd.type){
@@ -192,32 +167,7 @@ void scheduler()
 	}
 //调试7
 #ifdef DEBUG
-	struct waitQueue *p;	
-	char timebuf[BUFLEN];
-	if(current){
-		strcpy(timebuf,ctime(&(current->job->create_time)));
-		timebuf[strlen(timebuf)-1]='\0';
-		printf("%d\t%d\t%d\t%d\t%d\t%s\t%s\n",
-			current->job->jid,
-			current->job->pid,
-			current->job->ownerid,
-			current->job->run_time,
-			current->job->wait_time,
-			timebuf,"RUNNING");
-	}
-
-	for(p=head;p!=NULL;p=p->next){
-		strcpy(timebuf,ctime(&(p->job->create_time)));
-		timebuf[strlen(timebuf)-1]='\0';
-		printf("%d\t%d\t%d\t%d\t%d\t%s\t%s\n",
-			p->job->jid,
-			p->job->pid,
-			p->job->ownerid,
-			p->job->run_time,
-			p->job->wait_time,
-			timebuf,
-			"READY");
-	}	
+	do_stat(cmd);
 #endif
 
 	if (counttime != 0)
@@ -408,16 +358,16 @@ struct waitqueue* jobselect()
 
 	}
 	#ifdef DEBUG
-	char timebuf[BUFLEN];
-	strcpy(timebuf,ctime(&(select->job->create_time)));
-		timebuf[strlen(timebuf)-1]='\0';
-		printf("%d\t%d\t%d\t%d\t%d\t%s\t%s\n",
+	//char timebuf[BUFLEN];
+	//strcpy(timebuf,ctime(&(select->job->create_time)));
+	//	timebuf[strlen(timebuf)-1]='\0';
+		printf("%d\t%d\t%d\t%d\t%d\t%s\n",
 			select->job->jid,
 			select->job->pid,
 			select->job->ownerid,
 			select->job->run_time,
 			select->job->wait_time,
-			timebuf,"READY");
+			"READY");
 	#endif
 	return select;
 
