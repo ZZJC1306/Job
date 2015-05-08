@@ -22,7 +22,7 @@
 
 
 
-//#define DEBUG
+#define DEBUG
 
 
 
@@ -36,9 +36,9 @@ int globalfd;
 
 
 
-struct waitqueue *head=NULL;
-
 struct waitqueue *next=NULL,*current =NULL;
+
+struct waitqueue *head[3];
 
 
 
@@ -86,46 +86,10 @@ void scheduler()
 
 #endif
 
-	#ifdef DEBUG
-		printf("before update\n");
-		do_stat(cmd);
-	#endif
-
 	updateall();
 
-	#ifdef DEBUG
-		printf("after update\n");
-		do_stat(cmd);
-	#endif
-//调试任务7，显示命令执行前后队列中所有进程的信息
-#ifdef DEBUG
-	struct waitQueue *p;	
-	char timebuf[BUFLEN];
-	if(current){
-		strcpy(timebuf,ctime(&(current->job->create_time)));
-		timebuf[strlen(timebuf)-1]='\0';
-		printf("%d\t%d\t%d\t%d\t%d\t%s\t%s\n",
-			current->job->jid,
-			current->job->pid,
-			current->job->ownerid,
-			current->job->run_time,
-			current->job->wait_time,
-			timebuf,"RUNNING");
-	}
 
-	for(p=head;p!=NULL;p=p->next){
-		strcpy(timebuf,ctime(&(p->job->create_time)));
-		timebuf[strlen(timebuf)-1]='\0';
-		printf("%d\t%d\t%d\t%d\t%d\t%s\t%s\n",
-			p->job->jid,
-			p->job->pid,
-			p->job->ownerid,
-			p->job->run_time,
-			p->job->wait_time,
-			timebuf,
-			"READY");
-	}	
-#endif
+
 	switch(cmd.type){
 
 	case ENQ:
@@ -169,38 +133,8 @@ void scheduler()
 		break;
 
 	}
-//调试任务7
 
-#ifdef DEBUG
 
-	struct waitQueue *p;	
-	char timebuf[BUFLEN];
-	if(current){
-		strcpy(timebuf,ctime(&(current->job->create_time)));
-		timebuf[strlen(timebuf)-1]='\0';
-		printf("%d\t%d\t%d\t%d\t%d\t%s\t%s\n",
-			current->job->jid,
-			current->job->pid,
-			current->job->ownerid,
-			current->job->run_time,
-			current->job->wait_time,
-			timebuf,"RUNNING");
-	}
-
-	for(p=head;p!=NULL;p=p->next){
-		strcpy(timebuf,ctime(&(p->job->create_time)));
-		timebuf[strlen(timebuf)-1]='\0';
-		printf("%d\t%d\t%d\t%d\t%d\t%s\t%s\n",
-			p->job->jid,
-			p->job->pid,
-			p->job->ownerid,
-			p->job->run_time,
-			p->job->wait_time,
-			timebuf,
-			"READY");
-	}	
-
-#endif
 
 	/* 选择高优先级作业 */
 
@@ -240,13 +174,15 @@ void updateall()
 
 {
 
-	struct waitqueue *p;
+	struct waitqueue *p,*q,*mark;
 
+	int i;
 
+	//time block!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
 	/* 更新作业运行时间 */
 
-	if(current)
+	if(current) 
 
 		current->job->run_time += 1; /* 加1代表1000ms */
 
@@ -254,15 +190,63 @@ void updateall()
 
 	/* 更新作业等待时间及优先级 */
 
-	for(p = head; p != NULL; p = p->next){
+	for(i=2;i>=0;i--) {
 
-		p->job->wait_time += 1000;
+		for(p = head[i]; p != NULL;){
 
-		if(p->job->wait_time >= 5000 && p->job->curpri < 3){
+			p->job->wait_time += 1000;
 
-			p->job->curpri++;
+			if(p->job->wait_time >= 10000 && p->job->curpri < 3){
 
-			p->job->wait_time = 0;
+				if (p != head[p->job->curpri-1]) {
+
+					for (q = head[p->job->curpri-1]; q->next != p; q = q->next);
+
+					q->next = p->next;
+
+					mark = q;
+
+				}
+
+				else {
+
+					head[p->job->curpri-1] = p->next;
+
+					mark = NULL;
+
+				}
+
+				p->job->curpri++;
+
+				p->job->wait_time = 0;
+
+				if(head[p->job->curpri-1]){
+
+					for(q = head[p->job->curpri-1]; q->next != NULL; q = q->next);
+
+					q->next = p;
+
+					p->next = NULL;
+
+				}
+
+				else{
+
+					head[p->job->curpri-1] = p;
+
+					head[p->job->curpri-1]->next = NULL;
+
+				}
+
+			}
+
+			if (mark == NULL) {
+
+				p = head[p->job->curpri-1];
+
+			}
+
+			else p = mark->next;
 
 		}
 
@@ -278,7 +262,7 @@ struct waitqueue* jobselect()
 
 	struct waitqueue *p,*prev,*select,*selectprev;
 
-	int highest = -1;
+	int highest = -1,i;
 
 
 
@@ -286,42 +270,50 @@ struct waitqueue* jobselect()
 
 	selectprev = NULL;
 
-	if(head){
+	for(i=2;i>=0;i--) {
 
-		/* 遍历等待队列中的作业，找到优先级最高的作业 */
+		if(head[i]){
 
-		for(prev = head, p = head; p != NULL; prev = p,p = p->next)
+			/* 遍历等待队列中的作业，找到优先级最高的作业 */
 
-			if(p->job->curpri > highest){
+			/*for(prev = head[i], p = head[i]; p != NULL; prev = p,p = p->next)
 
-				select = p;
+				if(p->job->curpri > highest){
 
-				selectprev = prev;
+					select = p;
 
-				highest = p->job->curpri;
+					selectprev = prev;
+
+					highest = p->job->curpri;
+
+				}
+
+				selectprev->next = select->next;
+
+				if (select == selectprev)
+
+					head = NULL;
+
+			*/
+
+			if(current !=NULL && current->job->curpri == i+1) {
+
+				select = current->next;
 
 			}
 
-			selectprev->next = select->next;
+			if(select == NULL) {
 
-			if (select == selectprev)
+				select = head;
 
-				head = NULL;
+			}
+
+			break;
+
+		}
 
 	}
-//调试任务8
-#ifdef DEBUG
-	char timebuf[BUFLEN];
-	strcpy(timebuf,ctime(&(select->job->create_time)));
-		timebuf[strlen(timebuf)-1]='\0';
-		printf("%d\t%d\t%d\t%d\t%d\t%s\t%s\n",
-			select->job->jid,
-			select->job->pid,
-			select->job->ownerid,
-			select->job->run_time,
-			select->job->wait_time,
-			timebuf,"READY");
-#endif
+
 	return select;
 
 }
@@ -398,6 +390,22 @@ void jobswitch()
 
 		kill(current->job->pid,SIGSTOP);
 
+		/*take current out of the wait queue*/
+
+		if (current != head[current->job->curpri-1]) {
+
+			for (p = head[current->job->curpri-1]; p->next != current; p = p->next);
+
+			p->next = current->next;
+
+		}
+
+		else {
+
+			head[current->job->curpri-1] = current->next;
+
+		}
+
 		current->job->curpri = current->job->defpri;
 
 		current->job->wait_time = 0;
@@ -408,15 +416,21 @@ void jobswitch()
 
 		/* 放回等待队列 */
 
-		if(head){
+		if(head[current->job->defpri-1]){
 
-			for(p = head; p->next != NULL; p = p->next);
+			for(p = head[current->job->defpri-1]; p->next != NULL; p = p->next);
 
 			p->next = current;
 
-		}else{
+			current->next = NULL;
 
-			head = current;
+		}
+
+		else{
+
+			head[current->job->defpri-1] = current;
+
+			head[current->job->defpri-1]->next = NULL;
 
 		}
 
@@ -600,7 +614,7 @@ void do_enq(struct jobinfo *newjob,struct jobcmd enqcmd)
 
 	newnode->job=newjob;
 
-
+/*
 
 	if(head)
 
@@ -616,7 +630,7 @@ void do_enq(struct jobinfo *newjob,struct jobcmd enqcmd)
 
 
 
-	/*为作业创建进程*/
+	//为作业创建进程
 
 	if((pid=fork())<0)
 
@@ -628,7 +642,7 @@ void do_enq(struct jobinfo *newjob,struct jobcmd enqcmd)
 
 		newjob->pid =getpid();
 
-		/*阻塞子进程,等等执行*/
+		//阻塞子进程,等等执行
 
 		raise(SIGSTOP);
 
@@ -646,11 +660,11 @@ void do_enq(struct jobinfo *newjob,struct jobcmd enqcmd)
 
 
 
-		/*复制文件描述符到标准输出*/
+		//复制文件描述符到标准输出
 
 		dup2(globalfd,1);
 
-		/* 执行命令 */
+		// 执行命令 
 
 		if(execv(arglist[0],arglist)<0)
 
@@ -661,6 +675,82 @@ void do_enq(struct jobinfo *newjob,struct jobcmd enqcmd)
 	}else{
 
 		newjob->pid=pid;
+
+	}
+
+*/
+
+	if (newnode->job->defpri < current->job->curpri) { 
+
+	//wait
+
+		if(head[newnode->job->defpri-1]) {
+
+			for(p=head[newnode->job->defpri-1];p->next != NULL; p=p->next);
+
+			p->next =newnode;
+
+		}
+
+		else head[newnode->job->defpri-1]=newnode;
+
+		//为作业创建进程
+
+		if((pid=fork())<0)
+
+			error_sys("enq fork failed");
+
+
+
+		if(pid==0){
+
+			newjob->pid =getpid();
+
+			//阻塞子进程,等等执行
+
+			raise(SIGSTOP);
+
+		#ifdef DEBUG
+
+
+
+			printf("begin running\n");
+
+			for(i=0;arglist[i]!=NULL;i++)
+
+				printf("arglist %s\n",arglist[i]);
+
+		#endif
+
+
+
+			//复制文件描述符到标准输出
+
+			dup2(globalfd,1);
+
+			// 执行命令 
+
+			if(execv(arglist[0],arglist)<0)
+
+				printf("exec failed\n");
+
+			exit(1);
+
+		}else{
+
+			newjob->pid=pid;
+
+		}
+
+	}
+
+	else {
+
+	//run now
+
+	//bigger and equal need to be separated!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+	//need write!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
 	}
 
@@ -686,7 +776,7 @@ void do_deq(struct jobcmd deqcmd)
 
 #endif
 
-
+	//need think how it works, if wrong, improve it!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
 	/*current jodid==deqid,终止当前作业*/
 
@@ -695,6 +785,8 @@ void do_deq(struct jobcmd deqcmd)
 		printf("teminate current job\n");
 
 		kill(current->job->pid,SIGKILL);
+
+		next = jobselect();
 
 		for(i=0;(current->job->cmdarg)[i]!=NULL;i++){
 
@@ -712,17 +804,39 @@ void do_deq(struct jobcmd deqcmd)
 
 		current=NULL;
 
+		jobswitch();
+
 	}
 
-	else{ /* 或者在等待队列中查找deqid */
+	else{ /* 或者在等待队列中查找deqid *///!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!need improve
 
 		select=NULL;
 
 		selectprev=NULL;
 
-		if(head){
+	for(i=2;i>=0;i--) {
 
-			for(prev=head,p=head;p!=NULL;prev=p,p=p->next)
+		if(head[i]){
+			if (depid != head[i]->job->jid) {
+
+				for (prev = head[i],p = head[i]; p != NULL; prev=p,p = p->next) {
+					if (p->job->jid == depid) {
+						select=p;
+						selectprev=prev;
+						break;
+					}
+				}
+
+			}
+
+			else {
+
+				select = head[i];
+
+			}
+
+
+			/*for(prev=head[i],p=head[i];p!=NULL;prev=p,p=p->next) {
 
 				if(p->job->jid==deqid){
 
@@ -734,15 +848,17 @@ void do_deq(struct jobcmd deqcmd)
 
 				}
 
-				selectprev->next=select->next;
+			}
 
-				if(select==selectprev)
+			selectprev->next=select->next;
 
-					head=NULL;
+			if(select==selectprev)
 
-		}
+				head=NULL;
 
-		if(select){
+			
+
+			if(select){
 
 			for(i=0;(select->job->cmdarg)[i]!=NULL;i++){
 
@@ -751,6 +867,7 @@ void do_deq(struct jobcmd deqcmd)
 				(select->job->cmdarg)[i]=NULL;
 
 			}
+			}
 
 			free(select->job->cmdarg);
 
@@ -758,7 +875,7 @@ void do_deq(struct jobcmd deqcmd)
 
 			free(select);
 
-			select=NULL;
+			select=NULL;*/
 
 		}
 
@@ -775,6 +892,8 @@ void do_stat(struct jobcmd statcmd)
 	struct waitqueue *p;
 
 	char timebuf[BUFLEN];
+
+	int i;
 
 	/*
 
@@ -824,29 +943,35 @@ void do_stat(struct jobcmd statcmd)
 
 	}
 
+	for (i=2;i>=0;i--) {
 
+		for(p=head[i];p!=NULL;p=p->next){
 
-	for(p=head;p!=NULL;p=p->next){
+			if (p == current)
 
-		strcpy(timebuf,ctime(&(p->job->create_time)));
+				continue;
 
-		timebuf[strlen(timebuf)-1]='\0';
+			strcpy(timebuf,ctime(&(p->job->create_time)));
 
-		printf("%d\t%d\t%d\t%d\t%d\t%s\t%s\n",
+			timebuf[strlen(timebuf)-1]='\0';
 
-			p->job->jid,
+			printf("%d\t%d\t%d\t%d\t%d\t%s\t%s\n",
 
-			p->job->pid,
+				p->job->jid,
 
-			p->job->ownerid,
+				p->job->pid,
 
-			p->job->run_time,
+				p->job->ownerid,
 
-			p->job->wait_time,
+				p->job->run_time,
 
-			timebuf,
+				p->job->wait_time,
 
-			"READY");
+				timebuf,
+
+				"READY");
+
+		}
 
 	}
 
@@ -866,7 +991,7 @@ int main()
 
 	struct sigaction newact,oldact1,oldact2;
 
-
+	int i;
 
 	#ifdef DEBUG
 
@@ -874,7 +999,13 @@ int main()
 
 	#endif
 
+	
 
+	for (i=0;i<3;i++)
+
+		*head[i]=NULL;	
+
+	
 
 	if(stat("/tmp/server",&statbuf)==0){
 
@@ -912,7 +1043,7 @@ int main()
 
 	sigaction(SIGVTALRM,&newact,&oldact2);
 
-
+	//about time block!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
 	/* 设置时间间隔为1000毫秒 */
 
