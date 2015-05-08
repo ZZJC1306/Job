@@ -117,10 +117,8 @@ void scheduler()
 #endif
 
 	updateall();
-//调试7
-#ifdef DEBUG
-	do_stat(cmd);
-#endif
+
+
 
 	switch(cmd.type){
 
@@ -165,14 +163,16 @@ void scheduler()
 		break;
 
 	}
-//调试7
-#ifdef DEBUG
-	do_stat(cmd);
-#endif
 
-	if (counttime != 0)
+	//printf("555555555555555555\n");
+
+	if (counttime != 0) {
+
+		printf("time isnt up\n");
 
 		return;
+
+	}
 
 	/* 选择高优先级作业 */
 
@@ -212,25 +212,31 @@ void updateall()
 
 {
 
-	struct waitqueue *p,*q,*mark;
+	struct waitqueue *p,*q,*mark=NULL;
 
 	int i;
 
 	//time block!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
-
+	//printf("in updateall\n");
 
 	//update counttime;
 
-	counttime--;
+	if (counttime!=0) {
+
+		counttime--;
+
+	}
 
 	/* 更新作业运行时间 */
 
-	if(current) 
+	if(current) {
+
+		//printf("update runtime\n");
 
 		current->job->run_time += 1; /* 加1代表1000ms */
 
-
+	}
 
 	/* 更新作业等待时间及优先级 */
 
@@ -238,13 +244,17 @@ void updateall()
 
 		for(p = head[i]; p != NULL;){
 
-			p->job->wait_time += 1000;
+			if(p!=current)
 
-			if(p->job->wait_time >= 10000 && p->job->curpri < 3){
+				p->job->wait_time += 1000;
 
-				if (p != head[p->job->curpri-1]) {
+			//printf("4444444444444444\n");
 
-					for (q = head[p->job->curpri-1]; q->next != p; q = q->next);
+			if((p->job->wait_time) >= 10000 && (p->job->curpri) < 3){
+
+				if (p != head[(p->job->curpri)-1]) {
+
+					for (q = head[(p->job->curpri)-1]; q->next != p; q = q->next);
 
 					q->next = p->next;
 
@@ -254,19 +264,19 @@ void updateall()
 
 				else {
 
-					head[p->job->curpri-1] = p->next;
+					head[(p->job->curpri)-1] = p->next;
 
 					mark = NULL;
 
 				}
 
-				p->job->curpri++;
+				(p->job->curpri)++;
 
 				p->job->wait_time = 0;
 
-				if(head[p->job->curpri-1]){
+				if(head[(p->job->curpri)-1]){
 
-					for(q = head[p->job->curpri-1]; q->next != NULL; q = q->next);
+					for(q = head[(p->job->curpri)-1]; q->next != NULL; q = q->next);
 
 					q->next = p;
 
@@ -276,21 +286,25 @@ void updateall()
 
 				else{
 
-					head[p->job->curpri-1] = p;
+					head[(p->job->curpri)-1] = p;
 
-					head[p->job->curpri-1]->next = NULL;
+					head[(p->job->curpri)-1]->next = NULL;
 
 				}
 
+				if (mark == NULL) {
+
+					p = head[(p->job->curpri)-1];
+
+				}
+
+				else p = mark->next;
+
+				continue;
+
 			}
 
-			if (mark == NULL) {
-
-				p = head[p->job->curpri-1];
-
-			}
-
-			else p = mark->next;
+			p = p->next;
 
 		}
 
@@ -340,7 +354,7 @@ struct waitqueue* jobselect()
 
 			*/
 
-			if(current !=NULL && current->job->curpri == i+1) {
+			if(current !=NULL && (current->job->curpri) == i+1) {
 
 				select = current->next;
 
@@ -357,18 +371,7 @@ struct waitqueue* jobselect()
 		}
 
 	}
-	#ifdef DEBUG
-	//char timebuf[BUFLEN];
-	//strcpy(timebuf,ctime(&(select->job->create_time)));
-	//	timebuf[strlen(timebuf)-1]='\0';
-		printf("%d\t%d\t%d\t%d\t%d\t%s\n",
-			select->job->jid,
-			select->job->pid,
-			select->job->ownerid,
-			select->job->run_time,
-			select->job->wait_time,
-			"READY");
-	#endif
+
 	return select;
 
 }
@@ -385,7 +388,7 @@ void jobswitch()
 
 
 
-	if(current && current->job->state == DONE){ /* 当前作业完成 */
+	if(current && (current->job->state) == DONE){ /* 当前作业完成 */
 
 		/* 作业完成，删除它 */
 
@@ -427,13 +430,15 @@ void jobswitch()
 
 		current = next;
 
-		setcounttime(current->job->curpri);
+		setcounttime((current->job->curpri));
 
 		next = NULL;
 
 		current->job->state = RUNNING;
 
 		kill(current->job->pid,SIGCONT);
+
+		//printf("999999999999999999999\n");
 
 		return;
 
@@ -449,9 +454,9 @@ void jobswitch()
 
 		/*take current out of the wait queue*/
 
-		if (current != head[current->job->curpri-1]) {
+		if (current != head[(current->job->curpri)-1]) {
 
-			for (p = head[current->job->curpri-1]; p->next != current; p = p->next);
+			for (p = head[(current->job->curpri)-1]; p->next != current; p = p->next);
 
 			p->next = current->next;
 
@@ -459,7 +464,7 @@ void jobswitch()
 
 		else {
 
-			head[current->job->curpri-1] = current->next;
+			head[(current->job->curpri)-1] = current->next;
 
 		}
 
@@ -473,9 +478,9 @@ void jobswitch()
 
 		/* 放回等待队列 */
 
-		if(head[current->job->defpri-1]){
+		if(head[(current->job->defpri)-1]){
 
-			for(p = head[current->job->defpri-1]; p->next != NULL; p = p->next);
+			for(p = head[(current->job->defpri)-1]; p->next != NULL; p = p->next);
 
 			p->next = current;
 
@@ -485,15 +490,15 @@ void jobswitch()
 
 		else{
 
-			head[current->job->defpri-1] = current;
+			head[(current->job->defpri)-1] = current;
 
-			head[current->job->defpri-1]->next = NULL;
+			head[(current->job->defpri)-1]->next = NULL;
 
 		}
 
 		current = next;
 
-		setcounttime(current->job->curpri);
+		setcounttime((current->job->curpri));
 
 		next = NULL;
 
@@ -675,23 +680,39 @@ void do_enq(struct jobinfo *newjob,struct jobcmd enqcmd)
 
 
 
-	if(head[newnode->job->defpri-1]) {
+	if(head[(newnode->job->defpri)-1]!=NULL) {
+
+		//printf ("head != NULL");
 
 		for(p=head[newnode->job->defpri-1];p->next != NULL; p=p->next);
 
+		//printf("find end");
+
 		p->next =newnode;
+
+		//printf("insert successful");
 
 	}
 
-	else head[newnode->job->defpri-1]=newnode;
+	else {
 
-		
+		//printf("head == NULL");
+
+		head[newnode->job->defpri-1]=newnode;
+
+		//printf("insert successful");
+
+	}
+
+	//printf ("22222222222222222222222222\n");		
 
 	if((pid=fork())<0)
 
 		error_sys("enq fork failed");
 
 	if(pid==0){
+
+		//printf("78787878787878\n");
 
 		newjob->pid =getpid();
 
@@ -727,9 +748,13 @@ void do_enq(struct jobinfo *newjob,struct jobcmd enqcmd)
 
 		newjob->pid=pid;
 
-		if(newnode->job->defpri > current->job->curpri) {//if bigger, jobswitch; else, continue;
+		if(current == NULL || (newnode->job->defpri) > (current->job->curpri)) {//if bigger, jobswitch; else, continue;
+
+			printf ("steal the time\n");
 
 			next = newnode;
+
+			sleep(10);
 
 			jobswitch();
 
@@ -971,7 +996,7 @@ void do_deq(struct jobcmd deqcmd)
 
 		kill(current->job->pid,SIGKILL);
 
-		next = jobselect();
+		//next = jobselect();
 
 		for(i=0;(current->job->cmdarg)[i]!=NULL;i++){
 
@@ -989,7 +1014,9 @@ void do_deq(struct jobcmd deqcmd)
 
 		current=NULL;
 
-		jobswitch();
+		counttime=0;
+
+		//jobswitch();
 
 	}
 
