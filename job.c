@@ -817,6 +817,7 @@ void do_deq(struct jobcmd deqcmd)
 	for(i=2;i>=0;i--) {
 
 		if(head[i]){
+			
 			if (depid != head[i]->job->jid) {
 
 				for (prev = head[i],p = head[i]; p != NULL; prev=p,p = p->next) {
@@ -826,16 +827,34 @@ void do_deq(struct jobcmd deqcmd)
 						break;
 					}
 				}
+				selectprev->next=select->next;
 
 			}
 
 			else {
 
 				select = head[i];
+				head[i]=head[i]->next; 
 
 			}
+			if(select){
 
+				for(i=0;(select->job->cmdarg)[i]!=NULL;i++){
 
+					free((select->job->cmdarg)[i]);
+
+					(select->job->cmdarg)[i]=NULL;
+
+				}
+			}
+
+			free(select->job->cmdarg);
+
+			free(select->job);
+
+			free(select);
+
+			select=NULL;
 			/*for(prev=head[i],p=head[i];p!=NULL;prev=p,p=p->next) {
 
 				if(p->job->jid==deqid){
