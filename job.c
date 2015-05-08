@@ -1055,13 +1055,18 @@ if (current && (current->job->jid) ==deqid){
 
 		selectprev=NULL;
 
-		for(i=2;i>=0;i--) {
+		for(i=0;i<3;i++) {
 
 			if(head[i]){
-				printf("%d\n",i+1);
-				/*
 
-				if (deqid != ((head[i])->job->jid)) {
+				printf("%d\n",i+1);
+
+				printf("%d\n",deqid != ((head[i])->job->jid));
+
+				if ((head[i]->job->jid)!=deqid) {
+
+				
+
 					printf("not head");
 
 					for (prev = head[i],p = head[i]; p != NULL; prev=p,p = p->next) {
@@ -1077,6 +1082,7 @@ if (current && (current->job->jid) ==deqid){
 						}
 
 					}
+
 					printf("get select");
 
 					selectprev->next=select->next;
@@ -1084,35 +1090,20 @@ if (current && (current->job->jid) ==deqid){
 				}
 
 				else {
+
 					printf("is head");
 
 					select = head[i];
 
 					head[i]=head[i]->next; 
 
-				}*/
-				for (prev = head[i],p = head[i]; p != NULL; prev=p,p = p->next) {
-
-					if ((p->job->jid) == deqid) {
-
-						select=p;
-
-						selectprev=prev;
-
-						break;
-
-					}
+					break;
 
 				}
-				printf("get select");
-				if (select == selectprev) 
-					head[i]=head[i]->next;
-
-				else selectprev->next=select->next;				
-
 			}
-
 		}
+
+		
 		if(select == NULL) { 
 			return;
 		}
