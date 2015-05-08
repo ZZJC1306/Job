@@ -1083,9 +1083,13 @@ if (current && (current->job->jid) ==deqid){
 
 					}
 
-					printf("get select");
+					if(select!=NULL) {
 
-					selectprev->next=select->next;
+						printf("get select");
+
+						selectprev->next=select->next;
+						break;
+					}
 
 				}
 
