@@ -34,11 +34,41 @@ int fifo;
 
 int globalfd;
 
+int counttime=0;
+
 
 
 struct waitqueue *next=NULL,*current =NULL;
 
 struct waitqueue *head[3];
+
+
+
+void setcounttime(int pri) {
+
+	if (pri == 3)
+
+		counttime=1;
+
+	else if (pri == 2)
+
+		counttime=2;
+
+	else if (pri == 1)
+
+		counttime=5;
+
+	else {
+
+		printf ("wrong pri number\n");
+
+		counttime=0;
+
+	}
+
+}
+
+
 
 
 
@@ -87,35 +117,8 @@ void scheduler()
 #endif
 
 	updateall();
-//调试7
-#ifdef DEBUG
-	struct waitQueue *p;	
-	char timebuf[BUFLEN];
-	if(current){
-		strcpy(timebuf,ctime(&(current->job->create_time)));
-		timebuf[strlen(timebuf)-1]='\0';
-		printf("%d\t%d\t%d\t%d\t%d\t%s\t%s\n",
-			current->job->jid,
-			current->job->pid,
-			current->job->ownerid,
-			current->job->run_time,
-			current->job->wait_time,
-			timebuf,"RUNNING");
-	}
 
-	for(p=head;p!=NULL;p=p->next){
-		strcpy(timebuf,ctime(&(p->job->create_time)));
-		timebuf[strlen(timebuf)-1]='\0';
-		printf("%d\t%d\t%d\t%d\t%d\t%s\t%s\n",
-			p->job->jid,
-			p->job->pid,
-			p->job->ownerid,
-			p->job->run_time,
-			p->job->wait_time,
-			timebuf,
-			"READY");
-	}	
-#endif
+
 
 	switch(cmd.type){
 
@@ -160,35 +163,10 @@ void scheduler()
 		break;
 
 	}
-//调试7
-#ifdef DEBUG
-	struct waitQueue *p;	
-	char timebuf[BUFLEN];
-	if(current){
-		strcpy(timebuf,ctime(&(current->job->create_time)));
-		timebuf[strlen(timebuf)-1]='\0';
-		printf("%d\t%d\t%d\t%d\t%d\t%s\t%s\n",
-			current->job->jid,
-			current->job->pid,
-			current->job->ownerid,
-			current->job->run_time,
-			current->job->wait_time,
-			timebuf,"RUNNING");
-	}
 
-	for(p=head;p!=NULL;p=p->next){
-		strcpy(timebuf,ctime(&(p->job->create_time)));
-		timebuf[strlen(timebuf)-1]='\0';
-		printf("%d\t%d\t%d\t%d\t%d\t%s\t%s\n",
-			p->job->jid,
-			p->job->pid,
-			p->job->ownerid,
-			p->job->run_time,
-			p->job->wait_time,
-			timebuf,
-			"READY");
-	}	
-#endif
+	if (counttime != 0)
+
+		return;
 
 	/* 选择高优先级作业 */
 
@@ -233,6 +211,12 @@ void updateall()
 	int i;
 
 	//time block!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+
+
+	//update counttime;
+
+	counttime--;
 
 	/* 更新作业运行时间 */
 
@@ -358,7 +342,7 @@ struct waitqueue* jobselect()
 
 			if(select == NULL) {
 
-				select = head;
+				select = head[i];
 
 			}
 
@@ -367,19 +351,7 @@ struct waitqueue* jobselect()
 		}
 
 	}
-	//调试8
-	#ifdef DEBUG
-		char timebuf[BUFLEN];
-		strcpy(timebuf,ctime(&(select->job->create_time)));
-		timebuf[strlen(timebuf)-1]='\0';
-		printf("%d\t%d\t%d\t%d\t%d\t%s\t%s\n",
-			select->job->jid,
-			select->job->pid,
-			select->job->ownerid,
-			select->job->run_time,
-			select->job->wait_time,
-			timebuf,"READY");
-	#endif
+
 	return select;
 
 }
@@ -437,6 +409,8 @@ void jobswitch()
 		printf("begin start new job\n");
 
 		current = next;
+
+		setcounttime(current->job->curpri);
 
 		next = NULL;
 
@@ -501,6 +475,8 @@ void jobswitch()
 		}
 
 		current = next;
+
+		setcounttime(current->job->curpri);
 
 		next = NULL;
 
@@ -679,7 +655,8 @@ void do_enq(struct jobinfo *newjob,struct jobcmd enqcmd)
 	newnode->next =NULL;
 
 	newnode->job=newjob;
-	
+
+
 
 	if(head[newnode->job->defpri-1]) {
 
@@ -690,10 +667,13 @@ void do_enq(struct jobinfo *newjob,struct jobcmd enqcmd)
 	}
 
 	else head[newnode->job->defpri-1]=newnode;
+
 		
+
 	if((pid=fork())<0)
 
 		error_sys("enq fork failed");
+
 	if(pid==0){
 
 		newjob->pid =getpid();
@@ -729,9 +709,13 @@ void do_enq(struct jobinfo *newjob,struct jobcmd enqcmd)
 	}else{
 
 		newjob->pid=pid;
-		if(newnode->job->defpri > current->job->curpri) {
+
+		if(newnode->job->defpri > current->job->curpri) {//if bigger, jobswitch; else, continue;
+
 			next = newnode;
+
 			jobswitch();
+
 		}
 
 	}
@@ -801,8 +785,10 @@ void do_enq(struct jobinfo *newjob,struct jobcmd enqcmd)
 	}
 
 */
+
 /*
-	if (newnode->job->defpri < current->job->curpri) { 
+
+	if (newnode->job->defpri <= current->job->curpri) { 
 
 	//wait
 
@@ -868,14 +854,76 @@ void do_enq(struct jobinfo *newjob,struct jobcmd enqcmd)
 
 	else {
 
-	//run now
+	//if bigger, run now
 
-	//bigger and equal need to be separated!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+		if(head[newnode->job->defpri-1]) {
 
-	//need write!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+			for(p=head[newnode->job->defpri-1];p->next != NULL; p=p->next);
+
+			p->next =newnode;
+
+		}
+
+		else head[newnode->job->defpri-1]=newnode;
+
+		
+
+		if((pid=fork())<0)
+
+			error_sys("enq fork failed");
+
+		if(pid==0){
+
+			newjob->pid =getpid();
+
+			//阻塞子进程,等等执行
+
+			raise(SIGSTOP);
+
+		#ifdef DEBUG
+
+
+
+			printf("begin running\n");
+
+			for(i=0;arglist[i]!=NULL;i++)
+
+				printf("arglist %s\n",arglist[i]);
+
+		#endif
+
+
+
+			//复制文件描述符到标准输出
+
+			dup2(globalfd,1);
+
+			// 执行命令 
+
+			if(execv(arglist[0],arglist)<0)
+
+				printf("exec failed\n");
+
+			exit(1);
+
+		}else{
+
+			newjob->pid=pid;
+
+			next = newnode;
+
+			jobswitch();
+
+		}
+
+		
+
+
 
 	}
+
 */
+
 }
 
 
@@ -897,8 +945,6 @@ void do_deq(struct jobcmd deqcmd)
 	printf("deq jid %d\n",deqid);
 
 #endif
-
-	//need think how it works, if wrong, improve it!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
 	/*current jodid==deqid,终止当前作业*/
 
@@ -930,36 +976,87 @@ void do_deq(struct jobcmd deqcmd)
 
 	}
 
-	else{ /* 或者在等待队列中查找deqid *///!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!need improve
+	else{ /* 或者在等待队列中查找deqid */
 
 		select=NULL;
 
 		selectprev=NULL;
 
-	for(i=2;i>=0;i--) {
+		for(i=2;i>=0;i--) {
 
-		if(head[i]){
-			
-			if (depid != head[i]->job->jid) {
+			if(head[i]){
 
-				for (prev = head[i],p = head[i]; p != NULL; prev=p,p = p->next) {
-					if (p->job->jid == depid) {
-						select=p;
-						selectprev=prev;
-						break;
+				if (deqid != head[i]->job->jid) {
+
+					for (prev = head[i],p = head[i]; p != NULL; prev=p,p = p->next) {
+
+						if (p->job->jid == deqid) {
+
+							select=p;
+
+							selectprev=prev;
+
+							break;
+
+						}
+
 					}
+
+					selectprev->next=select->next;
+
 				}
+
+				else {
+
+					select = head[i];
+
+					head[i]=head[i]->next; 
+
+				}
+
+				if(select){
+
+					for(i=0;(select->job->cmdarg)[i]!=NULL;i++){
+
+						free((select->job->cmdarg)[i]);
+
+						(select->job->cmdarg)[i]=NULL;
+
+					}
+
+				}
+
+				free(select->job->cmdarg);
+
+				free(select->job);
+
+				free(select);
+
+				select=NULL;
+
+				/*for(prev=head[i],p=head[i];p!=NULL;prev=p,p=p->next) {
+
+					if(p->job->jid==deqid){
+
+						select=p;
+
+						selectprev=prev;
+
+						break;
+
+					}
+
+				}
+
 				selectprev->next=select->next;
 
-			}
+				if(select==selectprev)
 
-			else {
+					head=NULL;
 
-				select = head[i];
-				head[i]=head[i]->next; 
+			
 
-			}
-			if(select){
+				if(select){
 
 				for(i=0;(select->job->cmdarg)[i]!=NULL;i++){
 
@@ -968,55 +1065,18 @@ void do_deq(struct jobcmd deqcmd)
 					(select->job->cmdarg)[i]=NULL;
 
 				}
-			}
-
-			free(select->job->cmdarg);
-
-			free(select->job);
-
-			free(select);
-
-			select=NULL;
-			/*for(prev=head[i],p=head[i];p!=NULL;prev=p,p=p->next) {
-
-				if(p->job->jid==deqid){
-
-					select=p;
-
-					selectprev=prev;
-
-					break;
 
 				}
 
-			}
+				free(select->job->cmdarg);
 
-			selectprev->next=select->next;
+				free(select->job);
 
-			if(select==selectprev)
+				free(select);
 
-				head=NULL;
-
-			
-
-			if(select){
-
-			for(i=0;(select->job->cmdarg)[i]!=NULL;i++){
-
-				free((select->job->cmdarg)[i]);
-
-				(select->job->cmdarg)[i]=NULL;
+				select=NULL;*/
 
 			}
-			}
-
-			free(select->job->cmdarg);
-
-			free(select->job);
-
-			free(select);
-
-			select=NULL;*/
 
 		}
 
@@ -1144,7 +1204,7 @@ int main()
 
 	for (i=0;i<3;i++)
 
-		*head[i]=NULL;	
+		head[i]=NULL;	
 
 	
 
