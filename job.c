@@ -192,8 +192,17 @@ void scheduler()
 
 	#endif
 
+        #ifdef SHOW_SWITCH
+		printf("before switch\n");
+		do_stat(cmd);
+	#endif
+	
 	jobswitch();
 
+        #ifdef SHOW_SWITCH
+		printf("after switch\n");
+		do_stat(cmd);
+	#endif
 }
 
 
@@ -527,7 +536,10 @@ void sig_handler(int sig,siginfo_t *info,void *notused)
 	int status;
 
 	int ret;
-
+    
+        #ifdef SHOW_SIGCHLD
+	    struct jobcmd cmd;
+	#endif
 
 
 	switch (sig) {
@@ -546,6 +558,10 @@ case SIGVTALRM: /* 到达计时器所设置的计时间隔 */
 
 case SIGCHLD: /* 子进程结束时传送给父进程的信号 */
 
+        #ifdef SHOW_SIGCHLD
+	   do_stat(cmd);
+	#endif
+	
 	ret = waitpid(-1,&status,WNOHANG);
 
 	if (ret == 0)
