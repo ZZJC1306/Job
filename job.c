@@ -1006,13 +1006,26 @@ void do_deq(struct jobcmd deqcmd)
 
 	/*current jodid==deqid,终止当前作业*/
 
-	if (current && current->job->jid ==deqid){
+if (current && (current->job->jid) ==deqid){
 
 		printf("teminate current job\n");
 
 		kill(current->job->pid,SIGKILL);
 
-		//next = jobselect();
+		
+		if (current != head[(current->job->curpri)-1]) {
+
+			for (p = head[(current->job->curpri)-1]; p->next != current; p = p->next);
+
+			p->next=current->next;
+		}
+
+		else {
+
+			head[(current->job->curpri)-1]=current->next; 
+
+		}
+
 
 		for(i=0;(current->job->cmdarg)[i]!=NULL;i++){
 
@@ -1032,11 +1045,11 @@ void do_deq(struct jobcmd deqcmd)
 
 		counttime=0;
 
-		//jobswitch();
+		printf("7788");
 
 	}
 
-	else{ /* 或者在等待队列中查找deqid */
+	else{ // 或者在等待队列中查找deqid 
 
 		select=NULL;
 
@@ -1045,12 +1058,15 @@ void do_deq(struct jobcmd deqcmd)
 		for(i=2;i>=0;i--) {
 
 			if(head[i]){
+				printf("%d\n",i+1);
+				/*
 
-				if (deqid != head[i]->job->jid) {
+				if (deqid != ((head[i])->job->jid)) {
+					printf("not head");
 
 					for (prev = head[i],p = head[i]; p != NULL; prev=p,p = p->next) {
 
-						if (p->job->jid == deqid) {
+						if ((p->job->jid) == deqid) {
 
 							select=p;
 
@@ -1061,42 +1077,23 @@ void do_deq(struct jobcmd deqcmd)
 						}
 
 					}
+					printf("get select");
 
 					selectprev->next=select->next;
 
 				}
 
 				else {
+					printf("is head");
 
 					select = head[i];
 
 					head[i]=head[i]->next; 
 
-				}
+				}*/
+				for (prev = head[i],p = head[i]; p != NULL; prev=p,p = p->next) {
 
-				if(select){
-
-					for(i=0;(select->job->cmdarg)[i]!=NULL;i++){
-
-						free((select->job->cmdarg)[i]);
-
-						(select->job->cmdarg)[i]=NULL;
-
-					}
-
-				}
-
-				free(select->job->cmdarg);
-
-				free(select->job);
-
-				free(select);
-
-				select=NULL;
-
-				/*for(prev=head[i],p=head[i];p!=NULL;prev=p,p=p->next) {
-
-					if(p->job->jid==deqid){
+					if ((p->job->jid) == deqid) {
 
 						select=p;
 
@@ -1107,40 +1104,46 @@ void do_deq(struct jobcmd deqcmd)
 					}
 
 				}
+				printf("get select");
+				if (select == selectprev) 
+					head[i]=head[i]->next;
 
-				selectprev->next=select->next;
-
-				if(select==selectprev)
-
-					head=NULL;
-
-			
-
-				if(select){
-
-				for(i=0;(select->job->cmdarg)[i]!=NULL;i++){
-
-					free((select->job->cmdarg)[i]);
-
-					(select->job->cmdarg)[i]=NULL;
-
-				}
-
-				}
-
-				free(select->job->cmdarg);
-
-				free(select->job);
-
-				free(select);
-
-				select=NULL;*/
+				else selectprev->next=select->next;				
 
 			}
 
 		}
+		if(select == NULL) { 
+			return;
+		}
+
+		if(select!=NULL){
+			printf("%d\n",select->job->jid);
+			kill(select->job->pid,SIGKILL);
+
+			for(i=0;(select->job->cmdarg)[i]!=NULL;i++){
+
+				free((select->job->cmdarg)[i]);
+
+				(select->job->cmdarg)[i]=NULL;
+
+			}
+
+			free(select->job->cmdarg);
+
+			free(select->job);
+
+			free(select);
+
+			select=NULL;
+
+		}
+
+		printf("8877");
 
 	}
+
+}
 
 }
 
