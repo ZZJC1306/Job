@@ -679,6 +679,62 @@ void do_enq(struct jobinfo *newjob,struct jobcmd enqcmd)
 	newnode->next =NULL;
 
 	newnode->job=newjob;
+	
+
+	if(head[newnode->job->defpri-1]) {
+
+		for(p=head[newnode->job->defpri-1];p->next != NULL; p=p->next);
+
+		p->next =newnode;
+
+	}
+
+	else head[newnode->job->defpri-1]=newnode;
+		
+	if((pid=fork())<0)
+
+		error_sys("enq fork failed");
+	if(pid==0){
+
+		newjob->pid =getpid();
+
+		//阻塞子进程,等等执行
+
+		raise(SIGSTOP);
+
+	#ifdef DEBUG
+
+		printf("begin running\n");
+
+		for(i=0;arglist[i]!=NULL;i++)
+
+			printf("arglist %s\n",arglist[i]);
+
+	#endif
+
+
+
+		//复制文件描述符到标准输出
+
+		dup2(globalfd,1);
+
+		// 执行命令 
+
+		if(execv(arglist[0],arglist)<0)
+
+			printf("exec failed\n");
+
+		exit(1);
+
+	}else{
+
+		newjob->pid=pid;
+		if(newnode->job->defpri > current->job->curpri) {
+			next = newnode;
+			jobswitch();
+		}
+
+	}
 
 /*
 
@@ -745,7 +801,7 @@ void do_enq(struct jobinfo *newjob,struct jobcmd enqcmd)
 	}
 
 */
-
+/*
 	if (newnode->job->defpri < current->job->curpri) { 
 
 	//wait
@@ -819,7 +875,7 @@ void do_enq(struct jobinfo *newjob,struct jobcmd enqcmd)
 	//need write!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
 	}
-
+*/
 }
 
 
