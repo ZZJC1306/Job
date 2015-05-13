@@ -22,8 +22,19 @@
 
 
 
-#define DEBUG
+//#define DEBUG
 
+//#define SHOW_UPDATE
+
+//#define SHOW_SWITCH
+
+//#define SHOW_SIGCHLD
+
+//#define DISPLAY_BDFORE
+
+//#define DISPLAY_AFTER
+
+//#define DISPLAY_SELECT
 
 
 int jobid=0;
@@ -116,7 +127,22 @@ void scheduler()
 
 #endif
 
+#ifdef SHOW_UPDATE
+
+	printf("BEFORE update\n");
+
+	do_stat(cmd);
+
+#endif
 	updateall();
+
+#ifdef SHOW_UPDATE
+
+	printf("AFTER update\n");
+
+	do_stat(cmd);
+
+#endif
 
 
 
@@ -164,7 +190,7 @@ void scheduler()
 
 	}
 
-	//printf("555555555555555555\n");
+	
 
 	if (counttime != 0) {
 
