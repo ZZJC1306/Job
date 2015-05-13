@@ -251,8 +251,6 @@ void updateall()
 
 	int i;
 
-	//time block!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-
 	//printf("in updateall\n");
 
 	//update counttime;
@@ -283,7 +281,7 @@ void updateall()
 
 				p->job->wait_time += 1000;
 
-			//printf("4444444444444444\n");
+			
 
 			if((p->job->wait_time) >= 10000 && (p->job->curpri) < 3){
 
@@ -357,7 +355,11 @@ struct waitqueue* jobselect()
 
 	int highest = -1,i;
 
+#ifdef DISPLAY_SELECT
 
+ 	char timebuf1[BUFLEN];
+
+#endif
 
 	select = NULL;
 
@@ -369,25 +371,6 @@ struct waitqueue* jobselect()
 
 			/* 遍历等待队列中的作业，找到优先级最高的作业 */
 
-			/*for(prev = head[i], p = head[i]; p != NULL; prev = p,p = p->next)
-
-				if(p->job->curpri > highest){
-
-					select = p;
-
-					selectprev = prev;
-
-					highest = p->job->curpri;
-
-				}
-
-				selectprev->next = select->next;
-
-				if (select == selectprev)
-
-					head = NULL;
-
-			*/
 
 			if(current !=NULL && (current->job->curpri) == i+1) {
 
@@ -406,6 +389,42 @@ struct waitqueue* jobselect()
 		}
 
 	}
+
+#ifdef DISPLAY_SELECT
+
+
+
+    	printf("select job :\n");
+
+   	if(select==NULL)
+
+            	printf("NULL\n");
+
+    	else{
+
+            	strcpy(timebuf1,ctime(&(select->job->create_time))); 
+
+            	timebuf1[strlen(timebuf1)-1]='\0'; 
+
+		printf("JOBID\tPID\tOWNER\tRUNTIME\tWAITTIME\tCREATTIME\t\tSTATE\n");
+
+             	printf("%d\t%d\t%d\t%d\t%d\t%s\t%s\n", 
+
+	      	select->job->jid, 
+
+	       	select->job->pid, 
+
+	       	select->job->ownerid, 
+
+	       	select->job->run_time, 
+
+	       	select->job->wait_time, 
+
+	      	timebuf1,"READY"); 
+
+	} 
+
+#endif
 
 	return select;
 
@@ -472,8 +491,6 @@ void jobswitch()
 		current->job->state = RUNNING;
 
 		kill(current->job->pid,SIGCONT);
-
-		//printf("999999999999999999999\n");
 
 		return;
 
@@ -746,15 +763,13 @@ void do_enq(struct jobinfo *newjob,struct jobcmd enqcmd)
 
 	}
 
-	//printf ("22222222222222222222222222\n");		
+		
 
 	if((pid=fork())<0)
 
 		error_sys("enq fork failed");
 
 	if(pid==0){
-
-		//printf("78787878787878\n");
 
 		newjob->pid =getpid();
 
@@ -789,6 +804,8 @@ void do_enq(struct jobinfo *newjob,struct jobcmd enqcmd)
 	}else{
 
 		newjob->pid=pid;
+		
+		sleep(10);
 
 		if(current == NULL || (newnode->job->defpri) > (current->job->curpri)) {//if bigger, jobswitch; else, continue;
 
@@ -796,217 +813,12 @@ void do_enq(struct jobinfo *newjob,struct jobcmd enqcmd)
 
 			next = newnode;
 
-			sleep(10);
-
 			jobswitch();
 
 		}
 
 	}
 
-/*
-
-	if(head)
-
-	{
-
-		for(p=head;p->next != NULL; p=p->next);
-
-		p->next =newnode;
-
-	}else
-
-		head=newnode;
-
-
-
-	//为作业创建进程
-
-	if((pid=fork())<0)
-
-		error_sys("enq fork failed");
-
-
-
-	if(pid==0){
-
-		newjob->pid =getpid();
-
-		//阻塞子进程,等等执行
-
-		raise(SIGSTOP);
-
-#ifdef DEBUG
-
-
-
-		printf("begin running\n");
-
-		for(i=0;arglist[i]!=NULL;i++)
-
-			printf("arglist %s\n",arglist[i]);
-
-#endif
-
-
-
-		//复制文件描述符到标准输出
-
-		dup2(globalfd,1);
-
-		// 执行命令 
-
-		if(execv(arglist[0],arglist)<0)
-
-			printf("exec failed\n");
-
-		exit(1);
-
-	}else{
-
-		newjob->pid=pid;
-
-	}
-
-*/
-
-/*
-
-	if (newnode->job->defpri <= current->job->curpri) { 
-
-	//wait
-
-		if(head[newnode->job->defpri-1]) {
-
-			for(p=head[newnode->job->defpri-1];p->next != NULL; p=p->next);
-
-			p->next =newnode;
-
-		}
-
-		else head[newnode->job->defpri-1]=newnode;
-
-		//为作业创建进程
-
-		if((pid=fork())<0)
-
-			error_sys("enq fork failed");
-
-
-
-		if(pid==0){
-
-			newjob->pid =getpid();
-
-			//阻塞子进程,等等执行
-
-			raise(SIGSTOP);
-
-		#ifdef DEBUG
-
-
-
-			printf("begin running\n");
-
-			for(i=0;arglist[i]!=NULL;i++)
-
-				printf("arglist %s\n",arglist[i]);
-
-		#endif
-
-
-
-			//复制文件描述符到标准输出
-
-			dup2(globalfd,1);
-
-			// 执行命令 
-
-			if(execv(arglist[0],arglist)<0)
-
-				printf("exec failed\n");
-
-			exit(1);
-
-		}else{
-
-			newjob->pid=pid;
-
-		}
-
-	}
-
-	else {
-
-	//if bigger, run now
-
-		if(head[newnode->job->defpri-1]) {
-
-			for(p=head[newnode->job->defpri-1];p->next != NULL; p=p->next);
-
-			p->next =newnode;
-
-		}
-
-		else head[newnode->job->defpri-1]=newnode;
-
-		
-
-		if((pid=fork())<0)
-
-			error_sys("enq fork failed");
-
-		if(pid==0){
-
-			newjob->pid =getpid();
-
-			//阻塞子进程,等等执行
-
-			raise(SIGSTOP);
-
-		#ifdef DEBUG
-
-
-
-			printf("begin running\n");
-
-			for(i=0;arglist[i]!=NULL;i++)
-
-				printf("arglist %s\n",arglist[i]);
-
-		#endif
-
-
-
-			//复制文件描述符到标准输出
-
-			dup2(globalfd,1);
-
-			// 执行命令 
-
-			if(execv(arglist[0],arglist)<0)
-
-				printf("exec failed\n");
-
-			exit(1);
-
-		}else{
-
-			newjob->pid=pid;
-
-			next = newnode;
-
-			jobswitch();
-
-		}
-
-		
-
-
-
-	}
-
-*/
 
 }
 
@@ -1032,7 +844,7 @@ void do_deq(struct jobcmd deqcmd)
 
 	/*current jodid==deqid,终止当前作业*/
 
-if (current && (current->job->jid) ==deqid){
+	if (current && (current->job->jid) ==deqid){
 
 		printf("teminate current job\n");
 
@@ -1071,8 +883,6 @@ if (current && (current->job->jid) ==deqid){
 
 		counttime=0;
 
-		printf("7788");
-
 	}
 
 	else{ // 或者在等待队列中查找deqid 
@@ -1085,9 +895,9 @@ if (current && (current->job->jid) ==deqid){
 
 			if(head[i]){
 
-				printf("%d\n",i+1);
+				//printf("%d\n",i+1);
 
-				printf("%d\n",deqid != ((head[i])->job->jid));
+				//printf("%d\n",deqid != ((head[i])->job->jid));
 
 				if ((head[i]->job->jid)!=deqid) {
 
@@ -1111,7 +921,7 @@ if (current && (current->job->jid) ==deqid){
 
 					if(select!=NULL) {
 
-						printf("get select");
+						//printf("get select");
 
 						selectprev->next=select->next;
 						break;
@@ -1121,7 +931,7 @@ if (current && (current->job->jid) ==deqid){
 
 				else {
 
-					printf("is head");
+					//printf("is head");
 
 					select = head[i];
 
@@ -1160,11 +970,7 @@ if (current && (current->job->jid) ==deqid){
 
 		}
 
-		printf("8877");
-
 	}
-
-}
 
 }
 
@@ -1328,7 +1134,6 @@ int main()
 
 	sigaction(SIGVTALRM,&newact,&oldact2);
 
-	//about time block!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
 	/* 设置时间间隔为1000毫秒 */
 
