@@ -32,8 +32,8 @@ int main(int argc,char *argv[])
 	statcmd.argnum=0;
 	
 	#ifdef DEBUG
-		printf("deqcmd cmdtype\t%d(ENQ = -1,DEQ = -2,STAT = -3)\n"
-			"deqcmd owner\t%d\n",deqcmd.type,deqcmd.owner);
+		printf("statcmd cmdtype\t%d(ENQ = -1,DEQ = -2,STAT = -3)\n"
+			"statcmd owner\t%d\n",statcmd.type,statcmd.owner);
 	#endif
 
 	if((fd=open("/tmp/server",O_WRONLY))<0)
